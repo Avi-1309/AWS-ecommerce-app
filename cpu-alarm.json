@@ -1,0 +1,69 @@
+# Scalable E-Commerce Web Application on AWS
+
+![AWS](https://img.shields.io/badge/AWS-Cloud-orange?logo=amazon-aws)
+![Architecture](https://img.shields.io/badge/Architecture-3--Tier-blue)
+![Status](https://img.shields.io/badge/Status-Deployed-brightgreen)
+
+## Overview
+A production-grade, scalable e-commerce application deployed on AWS using a multi-tier architecture across 2 Availability Zones. Integrates Amazon Bedrock (Claude) to generate AI-powered product summaries on demand.
+
+## Architecture Diagram
+```
+Internet → Route 53 → ALB → EC2 Auto Scaling Group (Public Subnet)
+                                ↓              ↓
+                           RDS MySQL    DynamoDB (Sessions)
+                         (Private Subnet, Multi-AZ)
+                                ↓
+                          Amazon Bedrock (Claude API)
+                          S3 (Images + DB Backups)
+```
+
+## AWS Services Used
+| Service | Purpose |
+|---|---|
+| EC2 + Auto Scaling | App servers (min 1 / max 3, CPU-based scaling) |
+| Application Load Balancer | Traffic distribution across AZs |
+| VPC (Custom) | Network isolation — public/private subnets |
+| RDS MySQL (Multi-AZ) | Product catalog storage |
+| DynamoDB | Session management, low-latency reads |
+| S3 | Product image storage + DB backup exports |
+| Amazon Bedrock (Claude) | AI-generated product summaries via REST API |
+| IAM | Least-privilege roles — no hardcoded credentials |
+| CloudWatch + SNS | Monitoring, alarms (>80% CPU for 5 min) |
+| Route 53 | Custom domain + health-check failover |
+
+## Key Features
+- Auto Scaling reduces downtime during peak traffic
+- Multi-AZ RDS ensures database high availability
+- S3 lifecycle policies auto-transition objects to S3-IA after 30 days
+- IAM roles scope EC2 to only S3, DynamoDB, and Bedrock permissions
+- SNS email alerts for CPU threshold breaches
+
+## Setup & Deployment
+
+### Prerequisites
+- AWS Account with appropriate IAM permissions
+- AWS CLI configured (`aws configure`)
+
+### Steps
+1. **VPC Setup** — Create VPC, public/private subnets, IGW, NAT Gateway
+2. **EC2 + ALB** — Launch template → Auto Scaling Group behind ALB
+3. **RDS** — Multi-AZ MySQL instance in private subnet
+4. **DynamoDB** — Table for session data
+5. **S3** — Bucket with lifecycle policy (IA transition at 30 days)
+6. **IAM** — EC2 instance role with scoped permissions
+7. **Bedrock** — Enable Claude model in Bedrock console, invoke via API
+8. **CloudWatch** — Dashboards + alarms + SNS topic
+9. **Route 53** — Register domain, A-record alias to ALB
+
+## Monitoring
+- CloudWatch dashboard: EC2 CPU, ALB request count, RDS connections
+- SNS email alert: CPU > 80% sustained for 5 minutes
+- RDS automated backups to S3
+
+## Author
+**Pithani Avinash** — AWS Cloud Engineer  
+[LinkedIn](https://linkedin.com) | [GitHub](https://github.com)
+
+## License
+MIT
