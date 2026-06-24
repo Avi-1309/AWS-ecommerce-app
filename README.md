@@ -1,44 +1,69 @@
-#!/bin/bash
-# EC2 User Data Script — E-Commerce App
-# Runs automatically when EC2 instance launches
+# Scalable E-Commerce Web Application on AWS
 
-set -e
-exec > /var/log/userdata.log 2>&1
+![AWS](https://img.shields.io/badge/AWS-Cloud-orange?logo=amazon-aws)
+![Architecture](https://img.shields.io/badge/Architecture-3--Tier-blue)
+![Status](https://img.shields.io/badge/Status-Deployed-brightgreen)
 
-echo "=== Starting EC2 bootstrap ==="
+## Overview
+A production-grade, scalable e-commerce application deployed on AWS using a multi-tier architecture across 2 Availability Zones. Integrates Amazon Bedrock (Claude) to generate AI-powered product summaries on demand.
 
-# Update system packages
-yum update -y
+## Architecture Diagram
+```
+Internet → Route 53 → ALB → EC2 Auto Scaling Group (Public Subnet)
+                                ↓              ↓
+                           RDS MySQL    DynamoDB (Sessions)
+                         (Private Subnet, Multi-AZ)
+                                ↓
+                          Amazon Bedrock (Claude API)
+                          S3 (Images + DB Backups)
+```
 
-# Install Apache web server
-yum install -y httpd
-systemctl start httpd
-systemctl enable httpd
+## AWS Services Used
+| Service | Purpose |
+|---|---|
+| EC2 + Auto Scaling | App servers (min 1 / max 3, CPU-based scaling) |
+| Application Load Balancer | Traffic distribution across AZs |
+| VPC (Custom) | Network isolation — public/private subnets |
+| RDS MySQL (Multi-AZ) | Product catalog storage |
+| DynamoDB | Session management, low-latency reads |
+| S3 | Product image storage + DB backup exports |
+| Amazon Bedrock (Claude) | AI-generated product summaries via REST API |
+| IAM | Least-privilege roles — no hardcoded credentials |
+| CloudWatch + SNS | Monitoring, alarms (>80% CPU for 5 min) |
+| Route 53 | Custom domain + health-check failover |
 
-# Install Python 3 and pip
-yum install -y python3 python3-pip
+## Key Features
+- Auto Scaling reduces downtime during peak traffic
+- Multi-AZ RDS ensures database high availability
+- S3 lifecycle policies auto-transition objects to S3-IA after 30 days
+- IAM roles scope EC2 to only S3, DynamoDB, and Bedrock permissions
+- SNS email alerts for CPU threshold breaches
 
-# Install required Python libraries
-pip3 install boto3 flask mysql-connector-python
+## Setup & Deployment
 
-# Install AWS CLI v2 (if not present)
-if ! command -v aws &> /dev/null; then
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    unzip awscliv2.zip
-    ./aws/install
-fi
+### Prerequisites
+- AWS Account with appropriate IAM permissions
+- AWS CLI configured (`aws configure`)
 
-# Create app directory
-mkdir -p /var/www/html/app
-chown -R apache:apache /var/www/html/app
+### Steps
+1. **VPC Setup** — Create VPC, public/private subnets, IGW, NAT Gateway
+2. **EC2 + ALB** — Launch template → Auto Scaling Group behind ALB
+3. **RDS** — Multi-AZ MySQL instance in private subnet
+4. **DynamoDB** — Table for session data
+5. **S3** — Bucket with lifecycle policy (IA transition at 30 days)
+6. **IAM** — EC2 instance role with scoped permissions
+7. **Bedrock** — Enable Claude model in Bedrock console, invoke via API
+8. **CloudWatch** — Dashboards + alarms + SNS topic
+9. **Route 53** — Register domain, A-record alias to ALB
 
-# Set environment variables (no hardcoded secrets — uses IAM role)
-cat >> /etc/environment << 'ENVEOF'
-APP_ENV=production
-AWS_DEFAULT_REGION=ap-south-1
-S3_BUCKET_NAME=ecommerce-product-images
-DYNAMODB_TABLE=ecommerce-sessions
-BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
-ENVEOF
+## Monitoring
+- CloudWatch dashboard: EC2 CPU, ALB request count, RDS connections
+- SNS email alert: CPU > 80% sustained for 5 minutes
+- RDS automated backups to S3
 
-echo "=== EC2 bootstrap complete ==="
+## Author
+**Pithani Avinash** — AWS Cloud Engineer  
+
+## License
+MIT
+
